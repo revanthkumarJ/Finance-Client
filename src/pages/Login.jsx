@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { TextField, Button, Typography, Container, Box, Card, CircularProgress } from "@mui/material";
 import axios from 'axios';
 import { useNavigate } from "react-router-dom";
@@ -12,13 +12,6 @@ const LoginForm = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Check if the user is already logged in on component mount
-  // useEffect(() => {
-  //   const token = localStorage.getItem('token');
-  //   if (token) {
-  //     setIsLoggedIn(true);
-  //   }
-  // }, []);
 
   const handleLogin = async () => {
     if (!id || !password) {
@@ -67,7 +60,7 @@ const LoginForm = () => {
     logout(); 
   };
 
-  if (localStorage.getItem("user")) {
+  if (isLoggedIn) {
     return (
       <Container maxWidth="sm">
         <Box

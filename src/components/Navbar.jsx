@@ -253,7 +253,7 @@ export default function Demo() {
           ))}
         </List>
 
-        <List>
+        { isLoggedIn &&  (<List>
           {[
             "Add Due Number",
             "Edit Student Details",
@@ -287,8 +287,8 @@ export default function Demo() {
               </ListItem>
             </Link>
           ))}
-        </List>
-        <List>
+        </List>)
+        }<List>
           {["Insights", "See All Added Dues"].map((text, index) => (
             <Link
               to={text === "Insights" ? "/Insights" : "/see/added/dues"}

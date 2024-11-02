@@ -13,10 +13,6 @@ A web application for our college finance office to upload bank statements, anal
 - **Puneeth**: [Puneeth's GitHub](https://github.com/lvup81)
 - **Chethana**: [Chethana's GitHub](https://github.com/ChethanaPotukanam)
 
-- **Nagarjuna**: [Nagarjuna 's GitHub](https://github.com/Nagarjuna0033)
-- **Revanth**: [Revanth 's GitHub](https://github.com/revanthkumarJ)
-- **Puneeth**: [Puneeth's GitHub](https://github.com/lvup81)
-- **Chethana**: [Chethana's GitHub](https://github.com/ChethanaPotukanam)
 
 
 ## Documentation

@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import axios from "axios";
 import { snackbarUtil } from "../utils/SnackbarUtils";
-// import VerifyTextField from "../utils/VerifyTextField";
 import {
   TextField,
   Button,
@@ -26,85 +25,88 @@ const EditInstallment = ({ setMessage, triggerSnackbar }) => {
   const [selectedDueNumber, setSelectedDueNumber] = useState("");
   const [dueDetails, setDueDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showDueDetails, setShowDueDetails] = useState(false); // New state for managing visibility
 
-  // Fetch fee details based on student ID
-  const fetchFeeDetails = async () => {
-    // if (!VerifyTextField.textFieldCheck(studentID)) {
-    //   snackbarUtil(setMessage, triggerSnackbar, "Enter valid ID", "error");
-    //   return;
-    // }
+  const modelsMap = {
+    TutionFee: "TutionFeeSchema",
+    HostelFee: "HostelFeeSchema",
+    Others: "OtherFromMSI",
+  };
+
+  // Fetch dues based on student ID, source type, and model
+  const fetchDues = async () => {
+    setSelectedDueNumber(null);
+    setDueNumbers([]);
+    setDueDetails(null); // Reset due details on fetching new dues
+    setShowDueDetails(false); // Hide due details initially
+    if (!studentID || !sourceType || !destinationType) {
+      snackbarUtil(setMessage, triggerSnackbar, "Please complete all fields", "error");
+      return;
+    }
+
     try {
       setIsLoading(true);
       const response = await axios.get(
-        `http://localhost:3001/api/v1/student/fee/${studentID}`
+        `http://localhost:3001/api/v1/getDuesBasedOnFee/${modelsMap[sourceType]}/${studentID}`
       );
-      const feeData = response.data.feeDetails;
-      setDueNumbers(feeData.map((due) => due.dueNumber)); // Extract due numbers
-      snackbarUtil(
-        setMessage,
-        triggerSnackbar,
-        "Fetched Fee Details",
-        "success"
-      );
-      setIsLoading(false);
+
+      // Access the first element of the response to get the array of due objects
+      setDueNumbers(response.data[0]); // assuming response.data[0] gives the correct array of due objects
+      if (response.data[0].length > 0)
+        snackbarUtil(setMessage, triggerSnackbar, "Fetched Fee Details", "success");
+      else
+        snackbarUtil(setMessage, triggerSnackbar, "No Active Dues", "error");
+
     } catch (error) {
       snackbarUtil(setMessage, triggerSnackbar, error.message, "error");
+    } finally {
       setIsLoading(false);
     }
   };
 
-  // Fetch details for the selected due number
-  const fetchDueDetails = () => {
-    const selectedDue = dueNumbers.find(
-      (due) => due.dueNumber === selectedDueNumber
-    );
+  // Fetch due details for the selected due number
+  const fetchDueDetails = (dueNumber) => {
+    const selectedDue = dueNumbers.find((due) => due.ReceiptNo === dueNumber);
     if (selectedDue) {
-      setDueDetails(selectedDue);
+      setDueDetails({
+        dueNumber: selectedDue.ReceiptNo,
+        amount: selectedDue.Amount,
+        dueDate: selectedDue.Date,
+      });
+      setShowDueDetails(true); // Show due details
+    } else {
+      setShowDueDetails(false); // Hide due details if nothing is found
+    }
+  };
+
+  // Update installment API call
+  const changeInstallment = async () => {
+    try {
+      const response = await axios.put("http://localhost:3001/api/v1/update/studentFee/exchange", {
+        sourceModel: modelsMap[sourceType],
+        targetModel: modelsMap[destinationType],
+        ID: studentID,
+        DueNumber: selectedDueNumber,
+      });
+      snackbarUtil(setMessage, triggerSnackbar, "Installment Updated", "success");
+    } catch (error) {
+      snackbarUtil(setMessage, triggerSnackbar, error.message, "error");
     }
   };
 
   return (
-    <div
-      style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
-    >
-      {/* Input for Student ID and Fetch Button */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          marginTop: "20px",
-          gap: "10px",
-        }}
-      >
-        <TextField
-          label="Student ID"
-          value={studentID}
-          onChange={(e) => setStudentID(e.target.value)}
-          fullWidth
-        />
-      </div>
-      <div>
-        <Button
-          variant="contained"
-          onClick={fetchFeeDetails}
-          disabled={isLoading}
-          sx={{ 
-                marginTop: 2 ,
-                marginBottom:2,
-             }}
-        >
-          Fetch Fee Details
-        </Button>
-      </div>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+      {/* Input for Student ID */}
+      <TextField
+        label="Student ID"
+        value={studentID}
+        onChange={(e) => setStudentID(e.target.value)}
+        fullWidth
+        sx={{ marginTop: 2, width: "60%" }}
+      />
+
       {/* Source Type and Destination Type Select */}
-      <div
-        style={{
-          display: "flex",
-          gap: "20px",
-          marginTop: "20px",
-          width: "60%",
-        }}
-      >
+      <div style={{ display: "flex", gap: "20px", marginTop: "20px", width: "60%" }}>
         <FormControl fullWidth>
           <InputLabel>Source Type</InputLabel>
           <Select
@@ -132,6 +134,16 @@ const EditInstallment = ({ setMessage, triggerSnackbar }) => {
         </FormControl>
       </div>
 
+      {/* Fetch Details Button */}
+      <Button
+        variant="contained"
+        onClick={fetchDues}
+        disabled={isLoading}
+        sx={{ marginTop: 2, marginBottom: 2 }}
+      >
+        Fetch Fee Details
+      </Button>
+
       {/* Due Number Dropdown */}
       {dueNumbers.length > 0 && (
         <div style={{ display: "flex", marginTop: "20px", width: "60%" }}>
@@ -140,52 +152,42 @@ const EditInstallment = ({ setMessage, triggerSnackbar }) => {
             <Select
               value={selectedDueNumber}
               onChange={(e) => {
-                setSelectedDueNumber(e.target.value);
-                fetchDueDetails();
+                const newSelectedDueNumber = e.target.value;
+                setSelectedDueNumber(newSelectedDueNumber);
+                fetchDueDetails(newSelectedDueNumber);
               }}
               label="Due Number"
             >
-              {dueNumbers.map((due) => (
-                <MenuItem key={due} value={due}>
-                  {due}
-                </MenuItem>
-              ))}
+              {
+                dueNumbers.map((due) => (
+                  <MenuItem key={due._id} value={due.ReceiptNo}>
+                    {due.ReceiptNo} {/* Display the ReceiptNo */}
+                  </MenuItem>
+                ))
+              }
             </Select>
           </FormControl>
         </div>
       )}
 
       {/* Display Due Details */}
-      {dueDetails && (
-        <TableContainer
-          component={Paper}
-          style={{ marginTop: "20px", width: "60%" }}
-        >
-          <Typography
-            variant="h6"
-            align="center"
-            sx={{ marginTop: "20px", marginBottom: "20px", fontWeight: "bold" }}
-          >
+      {showDueDetails && dueDetails && (
+        <TableContainer component={Paper} style={{ marginTop: "20px", width: "60%" }}>
+          <Typography variant="h6" align="center" sx={{ marginTop: "20px", marginBottom: "20px", fontWeight: "bold" }}>
             Due Details
           </Typography>
           <Table sx={{ minWidth: 650 }} aria-label="due details table">
             <TableBody>
               <TableRow>
-                <TableCell sx={{ fontWeight: "bold", color: "#1976D2" }}>
-                  Due Number
-                </TableCell>
+                <TableCell sx={{ fontWeight: "bold", color: "#1976D2" }}>Due Number</TableCell>
                 <TableCell>{dueDetails.dueNumber}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell sx={{ fontWeight: "bold", color: "#1976D2" }}>
-                  Amount
-                </TableCell>
+                <TableCell sx={{ fontWeight: "bold", color: "#1976D2" }}>Amount</TableCell>
                 <TableCell>{dueDetails.amount}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell sx={{ fontWeight: "bold", color: "#1976D2" }}>
-                  Due Date
-                </TableCell>
+                <TableCell sx={{ fontWeight: "bold", color: "#1976D2" }}>Due Date</TableCell>
                 <TableCell>{dueDetails.dueDate}</TableCell>
               </TableRow>
             </TableBody>
@@ -193,21 +195,16 @@ const EditInstallment = ({ setMessage, triggerSnackbar }) => {
         </TableContainer>
       )}
 
-      {/* Action Button */}
-      <div
-        style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}
+      {/* Change Installment Button */}
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={changeInstallment}
+        disabled={!selectedDueNumber || !sourceType || !destinationType}
+        sx={{ marginTop: 2 }}
       >
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => {
-            // Integrate action here
-          }}
-          disabled={!dueDetails}
-        >
-          Perform Action
-        </Button>
-      </div>
+        Change Installment
+      </Button>
     </div>
   );
 };
